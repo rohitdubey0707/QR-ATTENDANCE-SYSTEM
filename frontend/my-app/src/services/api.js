@@ -3,7 +3,7 @@
 import axios from 'axios';
 
 // Use the correct API URL (adjust if your backend is on a different port)
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'https://qr-attendance-system-n2qn.onrender.com';
 
 // Create axios instance
 const api = axios.create({

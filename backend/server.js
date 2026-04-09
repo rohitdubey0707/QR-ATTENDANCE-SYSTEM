@@ -21,7 +21,7 @@ dotenv.config();
 const app = express();
 
 // CORS
-let corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
+let corsOrigin = process.env.CORS_ORIGIN || 'https://qr-attendance-system-vert.vercel.app';
 if (corsOrigin.includes(',')) {
 	corsOrigin = corsOrigin.split(',').map(origin => origin.trim());
 }
