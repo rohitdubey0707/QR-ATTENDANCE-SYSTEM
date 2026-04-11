@@ -16,48 +16,45 @@ dotenv.config();
 
 const app = express();
 
-
 // ------ Database ------
 connectDB();
 
+// ------ CORS ------
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map(o => o.trim())
+  : ["http://localhost:5173"];
 
-// ------ CORS (FIXED & SAFE) ------
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "https://qr-attendance-system-vert.vercel.app"
-];
+console.log("Allowed Origins:", allowedOrigins); // Render logs mein dikhega
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // allow requests like Postman or server-to-server (no origin)
       if (!origin) return callback(null, true);
-
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("CORS not allowed"));
+        callback(new Error("CORS not allowed: " + origin));
       }
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
+app.options("*", cors()); // Preflight fix
 
 // ------ Middlewares ------
 app.use(helmet());
 app.use(express.json({ limit: "10kb" }));
 app.use(morgan("dev"));
 
-
 // ------ Rate Limiting ------
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 min
+  windowMs: 15 * 60 * 1000,
   max: 1000,
 });
 app.use(globalLimiter);
-
 
 // ------ Routes ------
 app.get("/", (req, res) =>
@@ -69,10 +66,8 @@ app.use("/api/sessions", sessionRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/users", userRoutes);
 
-
 // ------ Error Handler ------
 app.use(errorHandler);
-
 
 // ------ Server ------
 const PORT = process.env.PORT || 5000;
