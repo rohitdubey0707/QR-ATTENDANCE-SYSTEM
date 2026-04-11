@@ -29,7 +29,14 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const token = localStorage.getItem('token');
+    const requestUrl = error.config?.url || '';
+    const isAuthRequest =
+      requestUrl.includes('/api/auth/login') ||
+      requestUrl.includes('/api/auth/register') ||
+      requestUrl.includes('/api/auth/register-status');
+
+    if (error.response?.status === 401 && token && !isAuthRequest) {
       localStorage.removeItem('token');
       window.location.href = '/login';
     }
@@ -41,6 +48,7 @@ api.interceptors.response.use(
 export const authAPI = {
   login: (email, password) => api.post('/api/auth/login', { email, password }),
   register: (userData) => api.post('/api/auth/register', userData),
+  getRegisterStatus: () => api.get('/api/auth/register-status'),
   getProfile: () => api.get('/api/auth/me'),
 };
 

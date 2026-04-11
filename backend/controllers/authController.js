@@ -2,6 +2,7 @@
 import User from "../models/user.js";
 import jwt from "jsonwebtoken";
 import asyncHandler from "express-async-handler";
+import { validationResult } from "express-validator";
 
 /**
  * ================================
@@ -23,7 +24,17 @@ const generateToken = (user) => {
  */
 // backend/controllers/authController.js - Updated register function
 export const register = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      message: errors.array()[0].msg,
+      errors: errors.array(),
+    });
+  }
+
   const { name, email, password, role, studentId } = req.body;
+  const userRole = role || 'student';
 
   // Check if user exists
   const existingUser = await User.findOne({ email });
@@ -31,19 +42,19 @@ export const register = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: "User already exists" });
   }
 
-  // If registering as teacher/admin, check permissions
-  if (role !== 'student') {
+  // Admin registration remains restricted unless it's the first user/admin setup
+  if (userRole === 'admin' && !req.allowFirstUser && !req.allowFirstAdmin) {
     // Check if user is authenticated and has admin privileges
     if (!req.user || req.user.role !== 'admin') {
       return res.status(403).json({ 
         success: false, 
-        message: "Only admins can register teachers or administrators" 
+        message: "Only admins can register administrators" 
       });
     }
   }
 
   // For students, studentId is required
-  if (role === 'student' && !studentId) {
+  if (userRole === 'student' && !studentId) {
     return res.status(400).json({ 
       success: false, 
       message: "Student ID is required for student registration" 
@@ -55,8 +66,8 @@ export const register = asyncHandler(async (req, res) => {
     name,
     email,
     password,
-    role: role || 'student', // Default to student if no role specified
-    studentId: role === 'student' ? studentId : undefined,
+    role: userRole,
+    studentId: userRole === 'student' ? studentId : undefined,
   });
 
   res.status(201).json({
@@ -77,6 +88,15 @@ export const register = asyncHandler(async (req, res) => {
  * ================================
  */
 export const login = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      message: errors.array()[0].msg,
+      errors: errors.array(),
+    });
+  }
+
   const { email, password } = req.body;
 
   // Find user + include password explicitly
@@ -97,8 +117,7 @@ export const login = asyncHandler(async (req, res) => {
       },
     });
   } else {
-    res.status(401); // Use 401 for unauthorized access
-    throw new Error("Invalid email or password");
+    res.status(401).json({ success: false, message: "Invalid email or password" });
   }
 });
 

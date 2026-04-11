@@ -7,42 +7,52 @@ import User from '../models/user.js';
 
 const router = express.Router();
 
-// Custom middleware to allow first user or student registration without auth
+// Custom middleware to allow public student/teacher registration
 const allowRegistration = async (req, res, next) => {
   try {
-    // Check if any user exists
+    const userRole = req.body.role || 'student';
+
+    // Check if any user exists and whether any admin exists
     const userCount = await User.countDocuments();
-    
-    // If no users exist, allow registration without restrictions
+    const adminCount = await User.countDocuments({ role: 'admin' });
+
+    // If no users exist, allow first registration freely
     if (userCount === 0) {
+      req.allowFirstUser = true;
       return next();
     }
-    
-    // If users exist, check if trying to register as student
-    if (req.body.role === 'student') {
-      return next(); // Always allow student registration
+
+    // If no admin exists yet, allow first admin registration freely
+    if (userRole === 'admin' && adminCount === 0) {
+      req.allowFirstAdmin = true;
+      return next();
     }
-    
-    // For teacher/admin registration, require authentication
+
+    // Allow public student and teacher registration
+    if (userRole === 'student' || userRole === 'teacher') {
+      return next();
+    }
+
+    // For admin registration, require authentication
     // We need to call protect manually since we're in middleware
-    const token = req.headers.authorization?.startsWith('Bearer ') 
-      ? req.headers.authorization.split(' ')[1] 
+    const token = req.headers.authorization?.startsWith('Bearer ')
+      ? req.headers.authorization.split(' ')[1]
       : null;
-    
+
     if (!token) {
       return res.status(401).json({ success: false, message: 'Not authorized to register non-student accounts' });
     }
-    
+
     try {
       // Verify token and get user (simplified version of protect middleware)
       const jwt = await import('jsonwebtoken');
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       req.user = await User.findById(decoded.id).select('-password');
-      
+
       if (!req.user || req.user.role !== 'admin') {
-        return res.status(403).json({ success: false, message: 'Only admins can register teachers or administrators' });
+        return res.status(403).json({ success: false, message: 'Only admins can register administrators' });
       }
-      
+
       next();
     } catch (error) {
       return res.status(401).json({ success: false, message: 'Token invalid' });
@@ -52,6 +62,32 @@ const allowRegistration = async (req, res, next) => {
     res.status(500).json({ success: false, message: 'Server error during registration' });
   }
 };
+
+router.get('/register-status', async (req, res) => {
+  try {
+    const userCount = await User.countDocuments();
+    const adminCount = await User.countDocuments({ role: 'admin' });
+
+    const allowAnyRole = userCount === 0;
+    const allowFirstAdmin = adminCount === 0;
+
+    res.json({
+      success: true,
+      data: {
+        userCount,
+        adminCount,
+        roles: {
+          student: true,
+          teacher: true,
+          admin: allowAnyRole || allowFirstAdmin,
+        },
+      },
+    });
+  } catch (err) {
+    console.error('Register status error:', err);
+    res.status(500).json({ success: false, message: 'Server error while loading registration options' });
+  }
+});
 
 // Public routes
 router.post('/login', loginRules, login);

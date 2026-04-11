@@ -1,7 +1,8 @@
 // src/pages/Register.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { authAPI } from '../services/api';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -14,9 +15,32 @@ const Register = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [allowedRoles, setAllowedRoles] = useState({
+    student: true,
+    teacher: true,
+    admin: false,
+  });
   
-  const { register } = useAuth();
+  const { register, currentUser } = useAuth();
   const navigate = useNavigate();
+  const canRegisterPrivilegedUsers = currentUser?.role === 'admin';
+
+  useEffect(() => {
+    const loadRegisterStatus = async () => {
+      try {
+        const response = await authAPI.getRegisterStatus();
+        setAllowedRoles(response.data.data.roles);
+      } catch (error) {
+        setAllowedRoles({
+          student: true,
+          teacher: true,
+          admin: false,
+        });
+      }
+    };
+
+    loadRegisterStatus();
+  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -31,6 +55,14 @@ const handleSubmit = async (e) => {
   
   if (formData.password !== formData.confirmPassword) {
     return setError('Passwords do not match');
+  }
+
+  if (formData.role === 'student' && !formData.studentId.trim()) {
+    return setError('Student ID is required for student registration');
+  }
+
+  if (!canRegisterPrivilegedUsers && !allowedRoles[formData.role]) {
+    return setError('Only an administrator can register that role right now');
   }
   
   try {
@@ -120,8 +152,13 @@ const handleSubmit = async (e) => {
             >
               <option value="student">Student</option>
               <option value="teacher">Teacher</option>
-              <option value="admin">Admin</option>
+              {(canRegisterPrivilegedUsers || allowedRoles.admin) && <option value="admin">Admin</option>}
             </select>
+            {!canRegisterPrivilegedUsers && !allowedRoles.admin && (
+              <p className="mt-2 text-xs text-secondary">
+                Teachers can self-register. Administrator accounts must be created by an administrator.
+              </p>
+            )}
           </div>
           
           {formData.role === 'student' && (
@@ -135,6 +172,7 @@ const handleSubmit = async (e) => {
                 type="text"
                 value={formData.studentId}
                 onChange={handleChange}
+                required
                 className="w-full px-4 py-2 bg-white/50 border border-secondary/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent1 text-primary placeholder-secondary/70"
               />
             </div>
