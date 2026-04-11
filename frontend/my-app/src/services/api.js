@@ -2,8 +2,8 @@
 
 import axios from 'axios';
 
-// Use the correct API URL (adjust if your backend is on a different port)
-const API_BASE_URL = 'https://qr-attendance-system-n2qn.onrender.com';
+// Use the correct API URL. To override for different environments, set VITE_API_BASE_URL in your .env.development file.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 // Create axios instance
 const api = axios.create({
@@ -39,9 +39,9 @@ api.interceptors.response.use(
 
 // Auth API
 export const authAPI = {
-  login: (email, password) => api.post('/auth/login', { email, password }),
-  register: (userData) => api.post('/auth/register', userData),
-  getProfile: () => api.get('/auth/me'),
+  login: (email, password) => api.post('/api/auth/login', { email, password }),
+  register: (userData) => api.post('/api/auth/register', userData),
+  getProfile: () => api.get('/api/auth/me'),
 };
 
 // Sessions API
