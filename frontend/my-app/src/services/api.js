@@ -3,7 +3,7 @@
 import axios from 'axios';
 
 // Use the correct API URL. To override for different environments, set VITE_API_BASE_URL in your .env.development file.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/$/, '');
 
 // Create axios instance
 const api = axios.create({
@@ -54,16 +54,16 @@ export const authAPI = {
 
 // Sessions API
 export const sessionsAPI = {
-  create: (sessionData) => api.post('/sessions', sessionData),
-  list: () => api.get('/sessions'),
-  getQR: (id) => api.get(`/sessions/${id}/qr`),
-  close: (id) => api.patch(`/sessions/${id}/close`),
+  create: (sessionData) => api.post('/api/sessions', sessionData),
+  list: () => api.get('/api/sessions'),
+  getQR: (id) => api.get(`/api/sessions/${id}/qr`),
+  close: (id) => api.patch(`/api/sessions/${id}/close`),
 };
 
 // Attendance API
 export const attendanceAPI = {
-  mark: (sessionCode) => api.post('/attendance/mark', { sessionCode }),
-  report: (sessionId) => api.get(`/attendance/report?sessionId=${sessionId}`),
+  mark: (sessionCode) => api.post('/api/attendance/mark', { sessionCode }),
+  report: (sessionId) => api.get(`/api/attendance/report?sessionId=${sessionId}`),
 };
 
 // Users API
@@ -73,7 +73,7 @@ export const usersAPI = {
     Object.keys(filters).forEach(key => {
       if (filters[key]) params.append(key, filters[key]);
     });
-    return api.get(`/users?${params.toString()}`);
+    return api.get(`/api/users?${params.toString()}`);
   },
 };
 
