@@ -17,10 +17,35 @@ export const markAttendance = asyncHandler(async (req, res) => {
   if (!session)
     return res.status(404).json({ success: false, message: "Invalid session code" });
 
-  if (!session.isActive || now < session.validFrom || now > session.validUntil) {
+  if (!session.isActive) {
     return res.status(400).json({
       success: false,
-      message: "Session is closed or outside valid window",
+      message: "Session is closed",
+    });
+  }
+
+  if (now < session.validFrom) {
+    return res.status(400).json({
+      success: false,
+      message: "Session has not started yet",
+    });
+  }
+
+  if (now > session.validUntil) {
+    return res.status(400).json({
+      success: false,
+      message: "Session has expired",
+    });
+  }
+
+  const existingAttendance = await Attendance.findOne({
+    student: req.user.id,
+    session: session._id,
+  });
+  if (existingAttendance) {
+    return res.status(409).json({
+      success: false,
+      message: "Attendance already marked for this session",
     });
   }
 

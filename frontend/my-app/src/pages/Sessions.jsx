@@ -5,6 +5,8 @@ import { sessionsAPI } from '../services/api';
 import QRGenerator from '../components/QRGenerator';
 import { useAuth } from '../context/AuthContext';
 
+const toIsoString = (value) => new Date(value).toISOString();
+
  const Sessions = () => {
   const { currentUser } = useAuth();
   const [sessions, setSessions] = useState([]);
@@ -49,7 +51,12 @@ import { useAuth } from '../context/AuthContext';
     
     try {
       setError('');
-      const response = await sessionsAPI.create(formData);
+      const sessionPayload = {
+        ...formData,
+        validFrom: toIsoString(formData.validFrom),
+        validUntil: toIsoString(formData.validUntil),
+      };
+      const response = await sessionsAPI.create(sessionPayload);
       setSessions([response.data.data, ...sessions]);
       setFormData({
         title: '',
